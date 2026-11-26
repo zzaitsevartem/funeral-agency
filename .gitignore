@@ -1,0 +1,12 @@
+node_modules/
+.next/
+dist/
+backend/generated/
+.env
+.env.*
+!.env.example
+.DS_Store
+*.tsbuildinfo
+frontend/next-env.d.ts
+.unlazy/
+.unlazy-hook-state.json

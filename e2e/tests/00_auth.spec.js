@@ -1,0 +1,84 @@
+const { test, expect } = require('./fixtures');
+const { login } = require('./helpers');
+
+const slug = process.env.ADMIN_ENTRY_SLUG;
+const email = process.env.ADMIN_EMAIL;
+const password = process.env.ADMIN_PASSWORD;
+const token = process.env.ADMIN_BOOTSTRAP_TOKEN;
+const baseURL = process.env.E2E_BASE_URL || 'http://127.0.0.1:8081';
+const origin = new URL(baseURL).origin;
+
+test('одноразовая регистрация, приватный вход и защита сессии', async ({ page, context }) => {
+  if (!slug || !email || !password || !token) throw new Error('Test admin environment is incomplete');
+  expect((await page.goto('/admin')).status()).toBe(200);
+  await expect(page.getByRole('heading', { name: 'Вход администратора' })).toBeVisible();
+  expect((await page.goto('/a-' + '0'.repeat(32))).status()).toBe(404);
+  const forbiddenPayments = await context.request.get('/api/admin/payments');
+  expect(forbiddenPayments.status()).toBe(401);
+  await page.goto('/');
+  await expect(page.locator(`a[href*="${slug}"]`)).toHaveCount(0);
+  const bootstrap = await context.request.get('/api/admin/bootstrap');
+  expect(bootstrap.ok()).toBeTruthy();
+  const { available } = await bootstrap.json();
+  if (available) {
+    await page.goto(`/${slug}/register`);
+    await page.getByLabel('Email').fill(email);
+    await page.getByLabel('Пароль').fill(password);
+    const wrongToken = (token.startsWith('0') ? '1' : '0') + token.slice(1);
+    await page.getByLabel('Код регистрации').fill(wrongToken);
+    const denied = page.waitForResponse(r => r.url().endsWith('/api/admin/register') && r.request().method() === 'POST');
+    await page.getByRole('button', { name: 'Создать администратора' }).click();
+    expect((await denied).status()).toBe(400);
+    await page.getByLabel('Пароль').fill('short');
+    await page.getByLabel('Код регистрации').fill(token);
+    await page.getByRole('button', { name: 'Создать администратора' }).click();
+    // Server validation is independently checked even if the browser blocks a short password.
+    const short = await context.request.post('/api/admin/register', { headers: { Origin: origin }, data: { email, password: 'short', bootstrapToken: token } });
+    expect(short.status()).toBe(400);
+    await page.getByLabel('Пароль').fill(password);
+    const registered = page.waitForResponse(r => r.url().endsWith('/api/admin/register') && r.request().method() === 'POST');
+    await page.getByRole('button', { name: 'Создать администратора' }).click();
+    expect((await registered).status()).toBe(201);
+    await expect(page).toHaveURL(new RegExp(`/${slug}/?$`));
+  } else {
+    test.info().annotations.push({ type: 'bootstrap', description: 'Existing test administrator reused; fresh-registration branch requires an empty isolated database.' });
+  }
+  const closed = await context.request.post('/api/admin/register', { headers: { Origin: origin }, data: { email, password, bootstrapToken: token } });
+  expect(closed.status()).toBe(409);
+  await page.goto(`/${slug}`);
+  await page.getByLabel('Email').fill(email);
+  await page.getByLabel('Пароль').fill('wrong-password-long-enough');
+  const badLogin = page.waitForResponse(r => r.url().endsWith('/api/admin/login') && r.request().method() === 'POST');
+  await page.getByRole('button', { name: 'Войти' }).click();
+  expect((await badLogin).status()).toBe(401);
+  await login(page);
+  const cookies = await context.cookies();
+  const adminCookie = cookies.find(c => c.name === 'favorit_admin' || c.name === '__Host-favorit_admin');
+  expect(adminCookie).toBeTruthy();
+  expect(adminCookie.httpOnly).toBe(true);
+  expect(adminCookie.sameSite).toBe('Lax');
+  expect(adminCookie.expires * 1000 - Date.now()).toBeLessThanOrEqual(31 * 60 * 1000);
+  expect(adminCookie.expires * 1000 - Date.now()).toBeGreaterThan(0);
+  expect((await context.request.get('/api/admin/session')).status()).toBe(200);
+  const parts = adminCookie.value.split('.');
+  expect(parts.length).toBe(3);
+  parts[2] = (parts[2][0] === 'A' ? 'B' : 'A') + parts[2].slice(1);
+  await context.addCookies([{ ...adminCookie, value: parts.join('.') }]);
+  expect((await context.request.get('/api/admin/session')).status()).toBe(401);
+  await context.addCookies([adminCookie]);
+  expect((await context.request.get('/api/admin/session')).status()).toBe(200);
+  const wrongOrigin = await context.request.post('/api/admin/logout', { headers: { Origin: 'http://evil.invalid' }, data: {} });
+  expect(wrongOrigin.status()).toBe(403);
+  await page.getByRole('button', { name: 'Профиль' }).click();
+  const logout = page.waitForResponse(r => r.url().endsWith('/api/admin/logout') && r.request().method() === 'POST');
+  await page.getByRole('menuitem', { name: 'Выйти' }).click();
+  expect((await logout).status()).toBe(204);
+  await context.addCookies([adminCookie]);
+  expect((await context.request.get('/api/admin/session')).status()).toBe(401);
+  await page.goto('/admin');
+  await expect(page.getByRole('heading', { name: 'Вход администратора' })).toBeVisible();
+  await page.getByLabel('Email').fill(email);
+  await page.getByLabel('Пароль').fill(password);
+  await page.getByRole('button', { name: 'Войти' }).click();
+  await expect(page.getByRole('menuitem', { name: 'Заказы' })).toBeVisible();
+});
