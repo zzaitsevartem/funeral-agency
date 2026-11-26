@@ -642,7 +642,8 @@
 .storefront-body .delivery-facts h2 { margin:0 0 24px; font-size:18px; }
 .storefront-body .delivery-facts p { min-height:66px; margin:0; font-size:15px; line-height:1.4; }
 .storefront-body .delivery-facts img { display:block; width:300px; height:300px; max-width:100%; margin:18px auto 0; object-fit:contain; }
-.storefront-body .contacts-map { height:420px; display:flex; align-items:flex-start; justify-content:flex-start; color:#191919; font-size:14px; }
+.storefront-body .contacts-map { height:420px; }
+.storefront-body .contacts-map iframe { display:block; width:100%; height:100%; border:0; }
 .storefront-body .contact-info { width:min(1288px,calc(100% - 48px)); min-height:216px; margin:0 auto 80px; padding:38px 48px; border-radius:30px; background:#e7e6e2; }
 .storefront-body .contact-info h2 { margin:0 0 48px; text-align:center; font-family:Forum,Georgia,serif; font-size:22px; font-weight:400; }
 .storefront-body .contact-details { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:20px; align-items:center; }
@@ -749,7 +750,10 @@
 .storefront-body .cart-empty-state p { margin:0; }
 .storefront-body .cart-empty-state .v-btn { min-height:42px; padding:8px 24px; border-color:#496c2e; border-radius:8px; color:#496c2e; font-size:13px; font-weight:400; text-transform:none; }
 .storefront-body .cart-list { width:min(1288px,calc(100% - 48px)); margin:34px auto 0; }
-.storefront-body .cart-summary { width:min(1288px,calc(100% - 48px)); margin:24px auto 40px; }
+.storefront-body .cart-summary { width:min(1288px,calc(100% - 48px)); margin:24px auto 0; }
+.storefront-body:has(.cart-page) { min-height:100vh; display:flex; flex-direction:column; }
+.storefront-body .site-main:has(.cart-page) { flex:1 0 auto; min-height:0; padding-bottom:40px; }
+.storefront-body .site-main:has(.cart-page) + .site-footer { margin-top:0; }
 @media(max-width:700px) {
  .storefront-body .cart-empty-state { min-height:550px; gap:28px; font-size:14px; }
  .storefront-body .cart-empty-state svg { width:44px; height:44px; }

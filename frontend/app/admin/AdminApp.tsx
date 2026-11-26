@@ -1,7 +1,8 @@
 "use client";
 
 import { Admin, Resource } from "react-admin";
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { useFormContext } from "react-hook-form";
 
 const apiUrl = "/api/admin";
 async function getResourceItems(resource: string) {
@@ -489,10 +490,38 @@ function PriceInput() {
     />
   );
 }
-function ProductFields() {
+const transliteration: Record<string, string> = {
+  а: "a", б: "b", в: "v", г: "g", д: "d", е: "e", ё: "yo",
+  ж: "zh", з: "z", и: "i", й: "y", к: "k", л: "l", м: "m",
+  н: "n", о: "o", п: "p", р: "r", с: "s", т: "t", у: "u",
+  ф: "f", х: "kh", ц: "ts", ч: "ch", ш: "sh", щ: "sch", ъ: "",
+  ы: "y", ь: "", э: "e", ю: "yu", я: "ya",
+};
+
+function productSlug(name: string) {
+  return [...name.toLowerCase()]
+    .map((letter) => transliteration[letter] ?? letter)
+    .join("")
+    .replace(/[^a-z0-9_-]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^[-_]+|[-_]+$/g, "");
+}
+
+function ProductFields({ autoSlug = false }: { autoSlug?: boolean }) {
+  const { setValue } = useFormContext();
+  const slugEdited = useRef(false);
+
   return (
     <>
-      <TextInput source="name" label="Название товара" validate={required()} />
+      <TextInput
+        source="name"
+        label="Название товара"
+        validate={required()}
+        onChange={(event) => {
+          if (autoSlug && !slugEdited.current)
+            setValue("slug", productSlug(event.target.value));
+        }}
+      />
       <TextInput source="sku" label="Артикул" validate={required()} />
       <ReferenceInput
         source="categoryId"
@@ -507,7 +536,16 @@ function ProductFields() {
       </ReferenceInput>
       <PriceInput />
       <TextInput source="description" label="Описание" multiline fullWidth />
-      <TextInput source="slug" label="Адрес страницы" validate={required()} />
+      <TextInput
+        source="slug"
+        label="Часть адреса страницы"
+        placeholder="grob-standart-6-gr"
+        helperText="Создаётся из названия товара. Категория автоматически добавляется в полный адрес; поле можно изменить вручную."
+        validate={required()}
+        onChange={() => {
+          if (autoSlug) slugEdited.current = true;
+        }}
+      />
       <BooleanInput source="active" label="Опубликован" />
       <TextInput
         source="imagesText"
@@ -576,7 +614,7 @@ function ProductCreate() {
   return (
     <Create>
       <SimpleForm>
-        <ProductFields />
+        <ProductFields autoSlug />
       </SimpleForm>
     </Create>
   );

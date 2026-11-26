@@ -53,7 +53,14 @@ function ContactsContent({ page }: { page: Page }) {
   return <>
     <ContentTitleBand title={page.title} />
     <main className="contacts-content">
-      <div className="contacts-map" aria-label="Карта проезда"><span>загрузка карты...</span></div>
+      <div className="contacts-map" aria-label="Карта проезда">
+        <iframe
+          title="Фаворит Ритуал на карте"
+          src="https://yandex.ru/map-widget/v1/?ll=37.776996%2C55.52648&z=13&pt=37.776996%2C55.52648%2Cpm2rdm&lang=ru_RU"
+          allowFullScreen
+          loading="lazy"
+        />
+      </div>
       <section className="contact-info"><h2>{introLines[0]}</h2><div className="contact-details"><p><span className="contact-icon" aria-hidden="true">▰</span>{introLines[1]}</p><p><span className="contact-icon" aria-hidden="true">☎</span><a href="tel:+74951518474">8 495 1518474</a></p><p><span className="contact-icon" aria-hidden="true">✉</span><a href="mailto:favorit.zakaz@bk.ru">favorit.zakaz@bk.ru</a></p><p><span className="contact-icon" aria-hidden="true">◷</span>Пн-Вс: 08:00-20:00<br/>Без выходных</p></div></section>
       <div className="contact-feedback"><ContactForm /><div className="contact-portrait"><img src="/c-content/man.webp" alt="Сотрудник завода Фаворит" /></div></div>
       <div className="contact-bottom"><section className="contact-call"><h2>{page.sections[1]?.heading || "Остались вопросы?"}</h2><p>{question.split("\n\n")[0]}</p><a href="tel:+74951518474">☎ &nbsp;8 495 1518474</a></section><section className="contact-law"><h2>{page.sections[2]?.heading || "Федеральный Закон «О погребении и похоронном деле»"}</h2><p>{law.split("\n").join(" ")}</p></section></div>
